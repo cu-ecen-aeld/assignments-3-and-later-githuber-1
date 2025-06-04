@@ -18,5 +18,9 @@ void test_validate_my_username()
      * TODO: Replace the line below with your code here as described above to verify your /conf/username.txt 
      * config file and my_username() functions are setup properly
      */
-    TEST_ASSERT_TRUE_MESSAGE(false,"AESD students, please fix me!");
+    const char* gitusername_a = my_username();
+    const char* gitusername_b = malloc_username_from_conf_file();
+
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(gitusername_a, gitusername_b, "Usernames don't match");
+    //TEST_ASSERT_TRUE_MESSAGE(false,"AESD students, please fix me!");
 }

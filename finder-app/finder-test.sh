@@ -8,7 +8,14 @@ set -u
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
+FINDERAPPDIR=./finder-app
 username=$(cat conf/username.txt)
+
+
+cd ..
+make clean || true
+make writer
+cd $FINDERAPPDIR
 
 if [ $# -lt 3 ]
 then
@@ -54,7 +61,7 @@ fi
 
 for i in $( seq 1 $NUMFILES)
 do
-	./writer.sh "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+	./writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")

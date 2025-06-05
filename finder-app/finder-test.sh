@@ -8,14 +8,11 @@ set -u
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
-FINDERAPPDIR=./finder-app
 username=$(cat conf/username.txt)
 
 
-cd ..
 make clean || true
 make writer
-cd $FINDERAPPDIR
 
 if [ $# -lt 3 ]
 then

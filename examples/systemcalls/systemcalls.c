@@ -16,8 +16,16 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
-    return true;
+    int ret = system(cmd);
+    
+    if (ret == -1)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 /**
@@ -60,8 +68,30 @@ bool do_exec(int count, ...)
 */
 
     va_end(args);
+    int status;
+    pid_t pid = fork(); // fork is called once, but returns twice, once in the parent
+                        // and once in the child
 
-    return true;
+    if (pid < 0)
+    {
+        // fork failed
+        return false;
+    } 
+    else if (pid == 0) // child process
+    {
+        execv(command[0], command); // Does not return if succeeds
+        perror("execv failed");
+        exit(1);
+    }
+    else // parent process
+    {
+        wait(&status);
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -87,7 +117,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
 /*
  * TODO
- *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
+ *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a reference,
  *   redirect standard out to a file specified by outputfile.
  *   The rest of the behaviour is same as do_exec()
  *
@@ -95,5 +125,35 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
     va_end(args);
 
-    return true;
+    int pid;
+    int status;
+    int fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+    if (fd < 0) { perror("open"); return false; }
+    pid = fork();
+
+    if (pid < 0)
+    {
+        // fork failed
+        perror("fork");
+        return false;
+    } 
+    else if (pid == 0) // child process
+    {
+        // redirect from fd 1 (stdout) to fd opened here
+        if (dup2(fd, 1) < 0) { perror("dup2"); return false; }
+        execv(command[0], command); // Does not return if succeeds
+        perror("execv");
+        close(fd);
+        exit(1); // must exit otherwise child will continue running on execv failure
+    }
+    else // parent process
+    {
+        wait(&status);
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            close(fd);
+            return true;
+        }
+    }
+    return false;
 }

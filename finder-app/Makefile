@@ -6,5 +6,5 @@ writer:
 	$(CC) $(CFLAGS) writer.c -o writer
 
 clean:
-	rm writer
-	rm *.o
+	rm -f writer
+	rm -f *.o

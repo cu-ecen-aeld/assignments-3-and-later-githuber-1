@@ -7,8 +7,9 @@ set -u
 
 NUMFILES=10
 WRITESTR=AELD_IS_FUN
-WRITEDIR=/tmp/aeld-data
-username=$(cat conf/username.txt)
+WRITEDIR=/tmp/
+CONFDIR=/etc/finder-app/conf
+username=$(cat $CONFDIR/username.txt)
 
 if [ $# -lt 3 ]
 then
@@ -22,7 +23,8 @@ then
 else
 	NUMFILES=$1
 	WRITESTR=$2
-	WRITEDIR=/tmp/aeld-data/$3
+	WRITEDIR=/tmp/$3
+	# WRITEDIR=/tmp/aeld-data/$3
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
@@ -32,7 +34,7 @@ echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
-assignment=`cat conf/assignment.txt`
+assignment=`cat $CONFDIR/assignment.txt`
 
 if [ $assignment != 'assignment1' ]
 then
@@ -59,8 +61,10 @@ done
 
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
 
+echo $OUTPUTSTRING > $WRITEDIR/assignment4-result.txt
+
 # remove temporary directories
-rm -rf /tmp/aeld-data
+# rm -rf /tmp/aeld-data
 
 set +e
 echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
@@ -68,6 +72,6 @@ if [ $? -eq 0 ]; then
 	echo "success"
 	exit 0
 else
-	echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
+	echo "failed: expected ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
 	exit 1
 fi

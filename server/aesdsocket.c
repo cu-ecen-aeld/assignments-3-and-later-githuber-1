@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -10,9 +11,33 @@
 #include <string.h>
 #include <arpa/inet.h>
 
+volatile sig_atomic_t stop = 0;
 
-int main(void)
+void handle_signal(int signo)
 {
+    if (signo == SIGINT || signo == SIGTERM)
+    {
+        stop = 1;
+    }   
+}
+
+int main(int argc, char *argv[])
+{
+    int run_as_daemon = 0;
+
+    // Check command-line args
+    if (argc == 2 && strcmp(argv[1], "-d") == 0) {
+        run_as_daemon = 1;
+    }
+
+    // register signal handlers
+    struct sigaction sa;
+    sa.sa_handler = handle_signal;
+    sa.sa_flags = 0;
+
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
     // Open syslog for later use
     openlog("aesdsocket", 0, LOG_USER);
 
@@ -67,6 +92,37 @@ int main(void)
     // freeaddrinfo after bind or we'll have a memory link
     freeaddrinfo(res);
 
+    if (run_as_daemon)
+    {
+        pid_t pid = fork();
+        if (pid < 0)
+        {
+            // Fork failed
+            perror("fork");
+            close(server_socket_fd);
+            exit(EXIT_FAILURE);
+        }
+        if (pid > 0)
+        {
+            // Parent can exit
+            exit(EXIT_SUCCESS);
+        }
+        
+        if (setsid() < 0)
+        {
+            perror("setsid");
+            exit(EXIT_FAILURE);
+        }
+
+        // Redirect fd to /dev/null
+        fclose(stdin);
+        fclose(stdout);
+        fclose(stderr);
+        open("/dev/null", O_RDONLY); // stdin
+        open("/dev/null", O_WRONLY); // stdout
+        open("/dev/null", O_RDWR);   // stderr
+    }
+
     struct sockaddr client_addr;
     socklen_t client_len = sizeof(client_addr);
 
@@ -79,7 +135,7 @@ int main(void)
     }
     printf("Waiting for clients on port 9000\n");
     
-    while (1)
+    while (!stop)
     {
         int client_fd = accept(server_socket_fd,
                                         &client_addr,
@@ -203,6 +259,8 @@ int main(void)
             }
         }
 
+        printf("Closed connection from %s\n", ip_str);
+        syslog(LOG_INFO, "Closed connection from %s", ip_str);
         close(client_fd);
         
         // Received newlines indicate the end of a receive stream, and should result
@@ -215,10 +273,9 @@ int main(void)
     }
 
     close(server_socket_fd);
+    remove(filename);
     return 0;
 
     // length of packet will be shorter than available heap size, handle malloc() failures
     // with errors and discard over length packets
-
-
 }

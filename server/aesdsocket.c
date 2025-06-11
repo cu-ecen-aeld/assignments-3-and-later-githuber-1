@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
     // File name for storing and reading back socket data
     const char *filename = "/var/tmp/aesdsocketdata";
-
+    remove(filename);
     // Opens a SOCK_STREAM bound to port 9000, failing and returning 
     // -1 if any of the socket connection steps fail
     struct addrinfo hints, *res;
@@ -138,8 +138,8 @@ int main(int argc, char *argv[])
     while (!stop)
     {
         int client_fd = accept(server_socket_fd,
-                                        &client_addr,
-                                        &client_len);
+                               &client_addr,
+                               &client_len);
         if (client_fd == -1)
         {
             perror("accept");
@@ -189,13 +189,17 @@ int main(int argc, char *argv[])
             packet_buf_size += bytes_read;
 
             // Detect end of packagt
-            if (strchr(read_buf, '\n') != NULL)
+            if (strchr(packet_buf, '\n') != NULL)
             {
+                printf("Found newline");
+                printf("Packet content (length %zu):\n%.*s\n", 
+                        packet_buf_size, (int)packet_buf_size, packet_buf);
                 packet_finished = 1;
             }
         }
 
         // If reads are successful, packet_buf will not be null here
+        // Write contents of packet_buf to end of file
         if (packet_buf)
         {
             // append data to file /var/tmp/aesdsocketdata, 
@@ -208,21 +212,10 @@ int main(int argc, char *argv[])
                 return -1;
             }
 
-            printf("Packet buf exists after reads\n");
-            // FILE *file = fopen(filename, "a");
-            // if (!file)
-            // {
-            //     perror("fopen");
-            //     printf("fileopen failed\n");
-            // } 
-            // else
-            // {
             printf("Writing file\n");
             printf("Packet content (length %zu):\n%.*s\n", 
                     packet_buf_size, (int)packet_buf_size, packet_buf);
-                // fwrite(packet_buf, 1, packet_buf_size, file);
-                // fclose(file);
-            // }
+
             write(log_fd, packet_buf, packet_buf_size);
             free(packet_buf);
             close(log_fd);
